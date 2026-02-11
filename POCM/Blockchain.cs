@@ -1,4 +1,8 @@
-﻿using Chess;
+﻿// This file is part of CheckmateCoin (PoCM (Proof of Checkmate)
+// (c) 2026 by Imusing
+// License: MIT
+
+using Chess;
 using System.Security.Cryptography; // for public/private key generation
 
 namespace POCM
@@ -48,6 +52,35 @@ namespace POCM
             return Chain.Last();
         }
 
+        public bool IsValidMoves(ChessBoard board, string[] moves, int n)
+        {
+            if (moves.Length != n)
+            {
+                return false;
+            }
+            
+            // 2-fold repetition is used because otherwise we can just repeat the same move over and over
+            // to reach the specified difficulty, obviously this is not a perfect solution but it should be good
+            // enough for now.
+            List<string> previousPositions = new List<string>();
+
+            foreach (string moveStr in moves)
+            {
+                Move move = board.Moves().FirstOrDefault(m => m.ToString().Contains(Ucitolongstring(moveStr)));
+                if (move == null || !board.IsValidMove(move))
+                {
+                    return false;
+                }
+                previousPositions.Add(board.ToFen());
+                if (previousPositions.Count(p => p == board.ToFen()) >= 2)
+                {
+                    return false;
+                }
+                board.Move(move);
+            }
+            return true;
+        }
+
         // check if other chain is valid and starts with our genesis block
         public bool IsValidChain(List<Block> otherChain)
         {
@@ -69,14 +102,9 @@ namespace POCM
                 }
                 ChessBoard board = ChessBoard.LoadFromFen(currentBlock.CalculateHash());
                 string[] moves = currentBlock.Data.Split(' ');
-                foreach (string moveStr in moves)
+                if (!IsValidMoves(board, moves, currentBlock.Difficulty))
                 {
-                    Move move = board.Moves().FirstOrDefault(m => m.ToString().Contains(Ucitolongstring(moveStr)));
-                    if (move == null || !board.IsValidMove(move))
-                    {
-                        return false;
-                    }
-                    board.Move(move);
+                    return false;
                 }
                 if (!board.IsEndGame)
                 {
@@ -149,23 +177,9 @@ namespace POCM
             newBlock.Timestamp = DateTime.UtcNow.Ticks;
             ChessBoard board = ChessBoard.LoadFromFen(newBlock.CalculateHash());
             string[] moves = newBlock.Data.Split(' ');
-            if (moves.Length != GetLatestBlock().Difficulty)
+            if (!IsValidMoves(board, moves, GetLatestBlock().Difficulty))
             {
                 return false;
-            }
-            foreach (string moveStr in moves)
-            {
-                Move move = board.Moves().FirstOrDefault(m => m.ToString().Contains(Ucitolongstring(moveStr)));
-                Move[] legals = board.Moves();
-                if (move == null)
-                {
-                    return false;
-                }
-                if (!board.IsValidMove(move))
-                {
-                    return false;
-                }
-                board.Move(move);
             }
             if (!board.IsEndGame)
             {

@@ -1,4 +1,8 @@
-﻿namespace POCM
+﻿// This file is part of CheckmateCoin (PoCM (Proof of Checkmate)
+// (c) 2026 by Imusing
+// License: MIT
+
+namespace POCM
 {
     public class Tx
     {

@@ -1,4 +1,8 @@
-﻿using Chess;
+﻿// This file is part of CheckmateCoin (PoCM (Proof of Checkmate)
+// (c) 2026 by Imusing
+// License: MIT
+
+using Chess;
 using Newtonsoft.Json;
 
 namespace POCM

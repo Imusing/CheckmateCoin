@@ -1,4 +1,8 @@
-﻿using System.Diagnostics;
+﻿// This file is part of CheckmateCoin (PoCM (Proof of Checkmate)
+// (c) 2026 by Imusing
+// License: MIT
+
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 namespace POCM
@@ -6,7 +10,7 @@ namespace POCM
     internal class Program
     {
         static int maxNodes = Environment.ProcessorCount * 2;
-        static int version = 1;
+        static int version = 2;
         static List<string> otherNodes = new List<string> { "192.168.68.128:5001" };
 
         static void StartApi(Blockchain blockchain, string listenAddress = "localhost:5001")
@@ -36,8 +40,17 @@ namespace POCM
                                 using (TcpClient client = new TcpClient())
                                 {
                                     client.Connect(ip, 5001);
-                                    otherNodes.Add(nodeUrl);
-                                    Console.WriteLine($"Added {nodeUrl} to other nodes");
+                                    using (var writer = new System.IO.StreamWriter(client.GetStream()))
+                                    using (var reader = new System.IO.StreamReader(client.GetStream()))
+                                    {
+                                        writer.Write("ping\n");
+                                        writer.Flush();
+                                        if (reader.ReadLine() == "pong v" + version)
+                                        {
+                                            otherNodes.Add(nodeUrl);
+                                            Console.WriteLine($"Added {nodeUrl} to other nodes");
+                                        }
+                                    }
                                 }
                             }
                             catch
@@ -262,7 +275,7 @@ namespace POCM
                                     // Find forced mate
                                     Process proc = Process.Start(new ProcessStartInfo
                                     {
-                                        FileName = "C:/Users/mmp/Downloads/stockfish-windows-x86-64-avx2.exe",
+                                        FileName = "C:/stockfish-windows-x86-64-avx2.exe",
                                         Arguments = "",
                                         UseShellExecute = false,
                                         RedirectStandardInput = true,
@@ -337,7 +350,7 @@ namespace POCM
                 {
                     dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".checkmatecoin");
                 }
-                // save blocks in chunks of 512 blocks to avoid hitting file size limits
+                // save blocks in chunks of 512 blocks to avoid single file that is very large
                 int chunkSize = 512;
                 for (int i = 0; i < chain.Count; i += chunkSize)
                 {
