@@ -222,7 +222,7 @@ namespace POCM
                                     hash = block.Hash,
                                     previoushash = block.PreviousHash,
                                     data = block.Data,
-                                    time = block.Timestamp / TimeSpan.TicksPerSecond,
+                                    time = block.Timestamp,
                                     tx = txIds
                                 }
                             };
@@ -264,18 +264,18 @@ namespace POCM
                         List<string> generatedHashes = new List<string>();
                         for (int i = 0; i < numBlocks; i++)
                         {
-                            Block block = new Block(blockchain.GetLatestBlock().Index + 1, DateTime.UtcNow.Ticks, "", blockchain.GetLatestBlock().Hash, blockchain.GetLatestBlock().PreviousTxs, 0);
+                            Block block = new Block(blockchain.GetLatestBlock().Index + 1, DateTimeOffset.UtcNow.ToUnixTimeSeconds(), "", blockchain.GetLatestBlock().Hash, blockchain.GetLatestBlock().PreviousTxs, 0);
                             while (!blockchain.AddBlock(block, address))
                             {
                                 try
                                 {
                                     ulong nonceUlong = BitConverter.ToUInt64(Guid.NewGuid().ToByteArray(), 0);
-                                    block = new Block(blockchain.GetLatestBlock().Index + 1, DateTime.UtcNow.Ticks, "", blockchain.GetLatestBlock().Hash, blockchain.GetLatestBlock().PreviousTxs, nonceUlong);
+                                    block = new Block(blockchain.GetLatestBlock().Index + 1, DateTimeOffset.UtcNow.ToUnixTimeSeconds(), "", blockchain.GetLatestBlock().Hash, blockchain.GetLatestBlock().PreviousTxs, nonceUlong);
                                     block.Transactions.Add(new Tx("Coinbase", address, 20, block.Index, 0));
                                     // Find forced mate
                                     Process proc = Process.Start(new ProcessStartInfo
                                     {
-                                        FileName = "C:/stockfish-windows-x86-64-avx2.exe",
+                                        FileName = "stockfish-windows-x86-64-avx2.exe",
                                         Arguments = "",
                                         UseShellExecute = false,
                                         RedirectStandardInput = true,

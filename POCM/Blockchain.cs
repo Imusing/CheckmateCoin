@@ -27,7 +27,7 @@ namespace POCM
                 Program.SaveChain(ChainInternal);
             }
         }
-        public static int TargetTime { get; set; } = 60000; // 60 seconds per block
+        public static int TargetTime { get; set; } = 60; // 60 seconds per block
 
         public Blockchain()
         {
@@ -37,7 +37,7 @@ namespace POCM
 
         private Block CreateGenesisBlock()
         {
-            Block genesis = new Block(0, 639063950141652850, "e5d3 b4a3 g7b2 a2b2 h8b2", "0", new List<Tx>(), 16027220999649898771);
+            Block genesis = new Block(0, 1770820247, "e5d3 b4a3 g7b2 a2b2 h8b2", "0", new List<Tx>(), 16027220999649898771);
             genesis.Transactions.Add(new Tx("0", "MIIBCgKCAQEAn11vzmykIANNLo6WinX8kdHcD7QgTe45isg//1wK4oDW+nZT5AEDNzOcL8WAuHpxkXn/OVqqkhxc3+mFLXbEEINN+/4W+U2uD1A6OCfvteh1D7PxMEXs7KcyPvUSSV97Lbt/SiobecGch6Lwg/sdN40coQ88/Gg7oe7qwqIGNZmGDvnEbkdw7+q8w7o/bMPI7v9E0RsS4Y5aZeWFrz2UB2t0lTOv+PLXr7RxSw5ysYfutLUSqtbN/14FQzDaQaaHX5EnwOcHL+KNoeYMz3vTI3CNnll0IgoG/mEdm5FrkvEWCsQp6zSav2Tw5O4eOX2+bmD0h7QfsB5ey3AsA/T0yQIDAQAB", 20, 0, 0));
             genesis.Hash = genesis.CalculateHash();
             if (genesis.Hash != "bnb1nrQQ/rpNpPpBR/pppp4/P3NR2/BkP1P3/1P2P1PK/qq6/8 w - - 0 1")
@@ -174,7 +174,7 @@ namespace POCM
                 newBlock.Transactions.Add(new Tx("Coinbase", minerAddress, 20, newBlock.Index, 0));
             else
                 newBlock.Transactions.Add(new Tx("Coinbase", GetGenesis().Transactions[0].To, 20, newBlock.Index, 0));
-            newBlock.Timestamp = DateTime.UtcNow.Ticks;
+            newBlock.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             ChessBoard board = ChessBoard.LoadFromFen(newBlock.CalculateHash());
             string[] moves = newBlock.Data.Split(' ');
             if (!IsValidMoves(board, moves, GetLatestBlock().Difficulty))
@@ -186,7 +186,7 @@ namespace POCM
                 return false;
             }
             // Simple difficulty changer
-            long timeTaken = (newBlock.Timestamp - GetLatestBlock().Timestamp) / TimeSpan.TicksPerMillisecond;
+            long timeTaken = (newBlock.Timestamp - GetLatestBlock().Timestamp);
             int difficulty = GetLatestBlock().Difficulty;
             if (timeTaken < TargetTime / 2)
             {
