@@ -50,7 +50,7 @@ namespace POCM
                 success = true;
                 using (var sha256 = System.Security.Cryptography.SHA256.Create())
                 {
-                    var rawData = $"{Index}{PreviousHash}{Nonce}{Transactions.Count}";
+                    var rawData = $"{Index}{PreviousHash}{Nonce}1";
                     var bytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(rawData));
                     Random rnd = new Random(BitConverter.ToInt32(bytes, 0));
                     // random chess position

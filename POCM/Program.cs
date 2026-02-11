@@ -185,6 +185,57 @@ namespace POCM
                         context.Response.OutputStream.Write(buffer, 0, buffer.Length);
                         context.Response.OutputStream.Close();
                     }
+                    else if (rpcRequest.method == "getbalance")
+                    {
+                        string address = rpcRequest.@params[0];
+                        int balance = blockchain.GetBalance(address);
+                        var response = new
+                        {
+                            result = balance
+                        };
+                        string jsonResponse = Newtonsoft.Json.JsonConvert.SerializeObject(response);
+                        byte[] buffer = System.Text.Encoding.UTF8.GetBytes(jsonResponse);
+                        context.Response.ContentLength64 = buffer.Length;
+                        context.Response.OutputStream.Write(buffer, 0, buffer.Length);
+                        context.Response.OutputStream.Close();
+                    }
+                    else if (rpcRequest.method == "sendtoaddress")
+                    {
+                        string fromPrivateKey = rpcRequest.@params[0];
+                        string toAddress = rpcRequest.@params[1];
+                        int amount = rpcRequest.@params[2];
+                        try
+                        {
+                            byte[] privateKeyBytes = Convert.FromBase64String(fromPrivateKey);
+                            using (var rsa = new System.Security.Cryptography.RSACryptoServiceProvider())
+                            {
+                                rsa.ImportRSAPrivateKey(privateKeyBytes, out _);
+                                string fromAddress = Convert.ToBase64String(rsa.ExportRSAPublicKey());
+                                byte[] signatureBytes = rsa.SignData(System.Text.Encoding.UTF8.GetBytes($"checkmate{fromAddress}{toAddress}{amount}"),
+                                    System.Security.Cryptography.HashAlgorithmName.SHA256, System.Security.Cryptography.RSASignaturePadding.Pkcs1);
+                                if (blockchain.GetBalance(fromAddress) >= amount)
+                                {
+                                    Tx tx = new Tx(fromAddress, toAddress, amount, blockchain.Chain.Count, blockchain.Chain.SelectMany(b => b.Transactions).Count() + blockchain.Mempool.Count, signatureBytes);
+                                    blockchain.Mempool.Add(tx);
+                                    var response = new
+                                    {
+                                        result = tx.Hash
+                                    };
+                                    string jsonResponse = Newtonsoft.Json.JsonConvert.SerializeObject(response);
+                                    byte[] buffer = System.Text.Encoding.UTF8.GetBytes(jsonResponse);
+                                    context.Response.ContentLength64 = buffer.Length;
+                                    context.Response.OutputStream.Write(buffer, 0, buffer.Length);
+                                    context.Response.OutputStream.Close();
+                                    return;
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            context.Response.StatusCode = 400;
+                            context.Response.OutputStream.Close();
+                        }
+                    }
                     else if (rpcRequest.method == "getblockhash")
                     {
                         int height = rpcRequest.@params[0];
@@ -271,7 +322,7 @@ namespace POCM
                                 {
                                     ulong nonceUlong = BitConverter.ToUInt64(Guid.NewGuid().ToByteArray(), 0);
                                     block = new Block(blockchain.GetLatestBlock().Index + 1, DateTimeOffset.UtcNow.ToUnixTimeSeconds(), "", blockchain.GetLatestBlock().Hash, blockchain.GetLatestBlock().PreviousTxs, nonceUlong);
-                                    block.Transactions.Add(new Tx("Coinbase", address, 20, block.Index, 0));
+                                    block.Transactions.Add(new Tx("Coinbase", address, 20, block.Index, 0, new byte[0]));
                                     // Find forced mate
                                     Process proc = Process.Start(new ProcessStartInfo
                                     {
