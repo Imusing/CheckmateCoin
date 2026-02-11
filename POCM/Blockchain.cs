@@ -102,7 +102,7 @@ namespace POCM
                 }
                 ChessBoard board = ChessBoard.LoadFromFen(currentBlock.CalculateHash());
                 string[] moves = currentBlock.Data.Split(' ');
-                if (!IsValidMoves(board, moves, currentBlock.Difficulty))
+                if (!IsValidMoves(board, moves, currentBlock.Difficulty + 1))
                 {
                     return false;
                 }

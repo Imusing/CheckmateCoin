@@ -11,7 +11,7 @@ namespace POCM
     {
         static int maxNodes = Environment.ProcessorCount * 2;
         static int version = 2;
-        static List<string> otherNodes = new List<string> { "192.168.68.128:5001" };
+        static List<string> otherNodes = new List<string> { "158.220.121.205:5001" };
 
         static void StartApi(Blockchain blockchain, string listenAddress = "localhost:5001")
         {
