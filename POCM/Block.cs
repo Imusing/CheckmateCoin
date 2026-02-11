@@ -164,7 +164,7 @@ namespace POCM
                         success = false;
                         continue;
                     }
-                    if (ChessBoard.LoadFromFen(fen + " w - - 0 1").IsEndGame && Index != 0)
+                    if (ChessBoard.LoadFromFen(fen + " w - - 0 1").IsEndGame)
                     {
                         Nonce++;
                         success = false;
