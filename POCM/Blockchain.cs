@@ -168,6 +168,21 @@ namespace POCM
             }
         }
 
+        public Tx? GetTransactionByHash(string hash)
+        {
+            foreach (var block in Chain)
+            {
+                foreach (var tx in block.Transactions)
+                {
+                    if (tx.Hash == hash)
+                    {
+                        return tx;
+                    }
+                }
+            }
+            return null;
+        }
+
         public bool AddBlock(Block newBlock, string? minerAddress = null)
         {
             newBlock.Transactions = newBlock.Transactions.Where(tx => tx.From != "Coinbase").ToList();
@@ -209,6 +224,10 @@ namespace POCM
                     {
                         continue;
                     }
+                    if (GetTransactionByHash(tx.Hash) != null)
+                    {
+                        continue;
+                    }
                     using (var rsa = new RSACryptoServiceProvider())
                     {
                         try
@@ -230,6 +249,7 @@ namespace POCM
                     }
                     tx.Height = newBlock.Index;
                     newBlock.Transactions.Add(tx);
+                    Mempool.Remove(tx);
                 }
             }
             Chain.Add(newBlock);
