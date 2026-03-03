@@ -53,6 +53,7 @@ namespace checkmatecoin_cli
             };
 
             var content = new StringContent(JsonConvert.SerializeObject(rpcRequest), System.Text.Encoding.UTF8, "application/json");
+            client.Timeout = TimeSpan.MaxValue;
             var response = client.PostAsync("http://localhost:19423/", content).Result;
             Console.WriteLine(response.Content.ReadAsStringAsync().Result);
         }
