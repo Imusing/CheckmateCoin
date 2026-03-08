@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "checkmatecoind": {
+      "commandName": "Project",
+      "commandLineArgs": "-gui"
+    }
+  }
+}

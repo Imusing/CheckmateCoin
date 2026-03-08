@@ -2,9 +2,12 @@
 // (c) 2026 by Imusing
 // License: MIT
 
+using SFML.Graphics;
+using SFML.Window;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using TGUI;
 namespace POCM
 {
     internal class Program
@@ -70,7 +73,7 @@ namespace POCM
                     try
                     {
                         using (var reader = new System.IO.StreamReader(context.GetStream()))
-                            using (var writer = new System.IO.StreamWriter(context.GetStream()))
+                        using (var writer = new System.IO.StreamWriter(context.GetStream()))
                         {
                             string request = reader.ReadLine();
                             Console.WriteLine($"Received request: {request} from {((IPEndPoint)context.Client.RemoteEndPoint).Address}");
@@ -126,7 +129,7 @@ namespace POCM
                             }
                         }
                     }
-                    catch (Exception ex)
+                    catch (System.Exception ex)
                     {
                         Console.WriteLine($"Error handling request: {ex.Message}");
                     }
@@ -363,7 +366,7 @@ namespace POCM
                                     proc.WaitForExit();
                                     block.Data = pv;
                                 }
-                                catch (Exception ex)
+                                catch (System.Exception ex)
                                 {
                                     Console.WriteLine($"Error: {ex.Message}");
                                 }
@@ -522,7 +525,7 @@ namespace POCM
                                 }
                             }
                         }
-                        catch (Exception ex)
+                        catch (System.Exception ex)
                         {
                             Console.WriteLine($"Error connecting to {otherNodes[index]}: {ex.Message}");
                         }
@@ -535,6 +538,185 @@ namespace POCM
             Thread rpcThread = new Thread(() => RPCServer(blockchain));
             apiThread.Start();
             rpcThread.Start();
+            if (args.Contains("-gui"))
+            {
+                TGUI.Label balanceLabel = new TGUI.Label() { Text = "Balance: 0 MATE" };
+                RenderWindow window = new RenderWindow(new VideoMode(new SFML.System.Vector2u(800, 600)), "CheckmateCoin Node");
+                window.Closed += (sender, e) => window.Close();
+                TGUI.Gui gui = new TGUI.Gui(window);
+
+                TGUI.Panel walletPanel = new TGUI.Panel();
+                if (File.Exists(Path.Combine(dataDir, "wallet.dat")))
+                {
+                    string walletJson = File.ReadAllText(Path.Combine(dataDir, "wallet.dat"));
+                    List<string> wallet = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(walletJson);
+                    int index = 0;
+                    foreach (var entry in wallet)
+                    {
+                        byte[] privateKeyBytes = Convert.FromBase64String(entry);
+                        using (var rsa = new System.Security.Cryptography.RSACryptoServiceProvider())
+                        {
+                            rsa.ImportRSAPrivateKey(privateKeyBytes, out _);
+                            string address = Convert.ToBase64String(rsa.ExportRSAPublicKey());
+                            TGUI.Label addressLabel = new TGUI.Label() { Text = address };
+                            balanceLabel.Text = $"Balance: {blockchain.GetBalance(address)} MATE";
+                            addressLabel.Position = new TGUI.Vector2f(0, index * 40);
+                            balanceLabel.Position = new TGUI.Vector2f(0, index * 40 + 20);
+                            walletPanel.Add(addressLabel);
+                            walletPanel.Add(balanceLabel);
+                        }
+                        index++;
+                    }
+                }
+                else
+                {
+                    TGUI.Button createWalletButton = new TGUI.Button();
+                    createWalletButton.Text = "Create Wallet";
+                    createWalletButton.OnClick += (sender, e) =>
+                    {
+                        using (var rsa = new System.Security.Cryptography.RSACryptoServiceProvider(2048))
+                        {
+                            string publicKey = Convert.ToBase64String(rsa.ExportRSAPublicKey());
+                            string privateKey = Convert.ToBase64String(rsa.ExportRSAPrivateKey());
+                            List<string> wallet = new List<string>();
+                            if (File.Exists(Path.Combine(dataDir, "wallet.dat")))
+                            {
+                                string walletJson = File.ReadAllText(Path.Combine(dataDir, "wallet.dat"));
+                                wallet = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(walletJson);
+                            }
+                            wallet.Add(privateKey);
+                            string walletJsonNew = Newtonsoft.Json.JsonConvert.SerializeObject(wallet);
+                            File.WriteAllText(Path.Combine(dataDir, "wallet.dat"), walletJsonNew);
+                            TGUI.Label addressLabel = new TGUI.Label() { Text = publicKey };
+                            balanceLabel.Text = $"Balance: {blockchain.GetBalance(publicKey)} MATE";
+                            addressLabel.Position = new TGUI.Vector2f(0, wallet.Count * 40);
+                            balanceLabel.Position = new TGUI.Vector2f(0, wallet.Count * 40 + 20);
+                            walletPanel.Add(addressLabel);
+                            walletPanel.Add(balanceLabel);
+                        }
+                    };
+                    walletPanel.Add(createWalletButton);
+                }
+
+                // Send / Receive panel
+                TGUI.Panel sendReceivePanel = new TGUI.Panel();
+                string sendText = "Send To (Address):";
+                TGUI.Label sendLabel = new TGUI.Label() { Text = sendText };
+                TGUI.EditBox sendEditBox = new TGUI.EditBox();
+                string amountText = "Amount:";
+                TGUI.Label amountLabel = new TGUI.Label() { Text = amountText };
+                TGUI.EditBox amountEditBox = new TGUI.EditBox();
+
+                TGUI.Label statusLabel = new TGUI.Label() { Text = "" };
+
+                TGUI.Button sendButton = new TGUI.Button() { Text = "Send" };
+                sendButton.OnClick += (sender, e) =>
+                {
+                    if (File.Exists(Path.Combine(dataDir, "wallet.dat")))
+                    {
+                        string walletJson = File.ReadAllText(Path.Combine(dataDir, "wallet.dat"));
+                        List<string> wallet = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(walletJson);
+                        if (wallet.Count > 0)
+                        {
+                            string fromPrivateKey = wallet[0];
+                            string toAddress = sendEditBox.Text;
+                            int amount = int.Parse(amountEditBox.Text);
+                            try
+                            {
+                                byte[] privateKeyBytes = Convert.FromBase64String(fromPrivateKey);
+                                using (var rsa = new System.Security.Cryptography.RSACryptoServiceProvider())
+                                {
+                                    rsa.ImportRSAPrivateKey(privateKeyBytes, out _);
+                                    string fromAddress = Convert.ToBase64String(rsa.ExportRSAPublicKey());
+                                    byte[] signatureBytes = rsa.SignData(System.Text.Encoding.UTF8.GetBytes($"checkmate{fromAddress}{toAddress}{amount}"),
+                                        System.Security.Cryptography.HashAlgorithmName.SHA256, System.Security.Cryptography.RSASignaturePadding.Pkcs1);
+                                    if (blockchain.GetBalance(fromAddress) >= amount)
+                                    {
+                                        Tx tx = new Tx(fromAddress, toAddress, amount, blockchain.Chain.Count, blockchain.Chain.SelectMany(b => b.Transactions).Count() + blockchain.Mempool.Count, signatureBytes);
+                                        blockchain.Mempool.Add(tx);
+                                        statusLabel.Text = $"Sent {amount} CheckmateCoin to {toAddress}";
+                                    }
+                                    else
+                                    {
+                                        statusLabel.Text = $"Insufficient balance to send {amount} CheckmateCoin";
+                                    }
+                                }
+                            }
+                            catch
+                            {
+                                statusLabel.Text = $"Error sending CheckmateCoin";
+                            }
+                        }
+                    }
+                };
+                sendLabel.Position = new TGUI.Vector2f(0, 0);
+                sendEditBox.Position = new TGUI.Vector2f(0, 20);
+                amountLabel.Position = new TGUI.Vector2f(0, 50);
+                amountEditBox.Position = new TGUI.Vector2f(0, 70);
+                statusLabel.Position = new TGUI.Vector2f(0, 100);
+                sendButton.Position = new TGUI.Vector2f(0, 130);
+                sendReceivePanel.Add(sendLabel);
+                sendReceivePanel.Add(sendEditBox);
+                sendReceivePanel.Add(amountLabel);
+                sendReceivePanel.Add(amountEditBox);
+                sendReceivePanel.Add(sendButton);
+                sendReceivePanel.Add(statusLabel);
+
+
+                // tabs
+                TGUI.Tabs tabs = new TGUI.Tabs();
+                tabs.Add("Wallet");
+                tabs.Add("Send/Receive", false);
+
+                tabs.OnTabSelect += (sender, e) =>
+                {
+                    if (tabs.Selected == "Wallet")
+                    {
+                        walletPanel.Visible = true;
+                        sendReceivePanel.Visible = false;
+                    }
+                    else if (tabs.Selected == "Send/Receive")
+                    {
+                        walletPanel.Visible = false;
+                        sendReceivePanel.Visible = true;
+                    }
+                };
+
+                tabs.Position = new TGUI.Vector2f(0, 0);
+                walletPanel.Position = new TGUI.Vector2f(0, 30);
+                sendReceivePanel.Position = new TGUI.Vector2f(0, 30);
+                gui.Add(tabs);
+                sendReceivePanel.Visible = false;
+                gui.Add(sendReceivePanel);
+                gui.Add(walletPanel);
+
+                Thread updateBalancesThread = new Thread(() =>
+                {
+                    while (window.IsOpen)
+                    {
+                        if (File.Exists(Path.Combine(dataDir, "wallet.dat")))
+                        {
+                            string walletJson = File.ReadAllText(Path.Combine(dataDir, "wallet.dat"));
+                            List<string> wallet = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(walletJson);
+                            int index = 0;
+                            foreach (var entry in wallet)
+                            {
+                                byte[] privateKeyBytes = Convert.FromBase64String(entry);
+                                using (var rsa = new System.Security.Cryptography.RSACryptoServiceProvider())
+                                {
+                                    rsa.ImportRSAPrivateKey(privateKeyBytes, out _);
+                                    string address = Convert.ToBase64String(rsa.ExportRSAPublicKey());
+                                    balanceLabel.Text = $"Balance: {blockchain.GetBalance(address)} MATE";
+                                }
+                                index++;
+                            }
+                        }
+                        Thread.Sleep(5000);
+                    }
+                });
+
+                gui.MainLoop(TGUI.Color.White);
+            }
             rpcThread.Join();
         }
     }

@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="Gera.Chess" Version="1.2.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="TGUI.Net" Version="1.12.0" />
   </ItemGroup>
 
 </Project>
