@@ -540,12 +540,12 @@ namespace POCM
             rpcThread.Start();
             if (args.Contains("-gui"))
             {
-                TGUI.Label balanceLabel = new TGUI.Label() { Text = "Balance: 0 MATE" };
                 RenderWindow window = new RenderWindow(new VideoMode(new SFML.System.Vector2u(800, 600)), "CheckmateCoin Node");
-                window.Closed += (sender, e) => window.Close();
+
                 TGUI.Gui gui = new TGUI.Gui(window);
 
                 TGUI.Panel walletPanel = new TGUI.Panel();
+                TGUI.Label balanceLabel = new TGUI.Label() { Text = "Balance: 0 CHECK" };
                 if (File.Exists(Path.Combine(dataDir, "wallet.dat")))
                 {
                     string walletJson = File.ReadAllText(Path.Combine(dataDir, "wallet.dat"));
@@ -559,11 +559,10 @@ namespace POCM
                             rsa.ImportRSAPrivateKey(privateKeyBytes, out _);
                             string address = Convert.ToBase64String(rsa.ExportRSAPublicKey());
                             TGUI.Label addressLabel = new TGUI.Label() { Text = address };
-                            balanceLabel.Text = $"Balance: {blockchain.GetBalance(address)} MATE";
+                            balanceLabel.Text = $"Balance: {blockchain.GetBalance(address)} CHECK";
                             addressLabel.Position = new TGUI.Vector2f(0, index * 40);
                             balanceLabel.Position = new TGUI.Vector2f(0, index * 40 + 20);
                             walletPanel.Add(addressLabel);
-                            walletPanel.Add(balanceLabel);
                         }
                         index++;
                     }
@@ -588,15 +587,16 @@ namespace POCM
                             string walletJsonNew = Newtonsoft.Json.JsonConvert.SerializeObject(wallet);
                             File.WriteAllText(Path.Combine(dataDir, "wallet.dat"), walletJsonNew);
                             TGUI.Label addressLabel = new TGUI.Label() { Text = publicKey };
-                            balanceLabel.Text = $"Balance: {blockchain.GetBalance(publicKey)} MATE";
+                            balanceLabel.Text = $"Balance: {blockchain.GetBalance(publicKey)} CHECK";
                             addressLabel.Position = new TGUI.Vector2f(0, wallet.Count * 40);
                             balanceLabel.Position = new TGUI.Vector2f(0, wallet.Count * 40 + 20);
                             walletPanel.Add(addressLabel);
-                            walletPanel.Add(balanceLabel);
                         }
                     };
                     walletPanel.Add(createWalletButton);
                 }
+                balanceLabel.Position = new TGUI.Vector2f(0, 40);
+                walletPanel.Add(balanceLabel);
 
                 // Send / Receive panel
                 TGUI.Panel sendReceivePanel = new TGUI.Panel();
@@ -610,6 +610,30 @@ namespace POCM
                 TGUI.Label statusLabel = new TGUI.Label() { Text = "" };
 
                 TGUI.Button sendButton = new TGUI.Button() { Text = "Send" };
+                TGUI.Button copyAddressButton = new TGUI.Button() { Text = "Copy My Address" };
+
+                copyAddressButton.OnClick += (sender, e) =>
+                {
+                    if (File.Exists(Path.Combine(dataDir, "wallet.dat")))
+                    {
+                        string walletJson = File.ReadAllText(Path.Combine(dataDir, "wallet.dat"));
+                        List<string> wallet = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(walletJson);
+                        if (wallet.Count > 0)
+                        {
+                            byte[] privateKeyBytes = Convert.FromBase64String(wallet[0]);
+                            using (var rsa = new System.Security.Cryptography.RSACryptoServiceProvider())
+                            {
+                                rsa.ImportRSAPrivateKey(privateKeyBytes, out _);
+                                string address = Convert.ToBase64String(rsa.ExportRSAPublicKey());
+                                Clipboard.Contents = address;
+                                statusLabel.Text = $"Copied address {address.Substring(0, 10)}... to clipboard";
+                            }
+                            ;
+                        }
+                    }
+                };
+
+
                 sendButton.OnClick += (sender, e) =>
                 {
                     if (File.Exists(Path.Combine(dataDir, "wallet.dat")))
@@ -655,12 +679,14 @@ namespace POCM
                 amountEditBox.Position = new TGUI.Vector2f(0, 70);
                 statusLabel.Position = new TGUI.Vector2f(0, 100);
                 sendButton.Position = new TGUI.Vector2f(0, 130);
+                copyAddressButton.Position = new TGUI.Vector2f(100, 130);
                 sendReceivePanel.Add(sendLabel);
                 sendReceivePanel.Add(sendEditBox);
                 sendReceivePanel.Add(amountLabel);
                 sendReceivePanel.Add(amountEditBox);
                 sendReceivePanel.Add(sendButton);
                 sendReceivePanel.Add(statusLabel);
+                sendReceivePanel.Add(copyAddressButton);
 
 
                 // tabs
@@ -706,7 +732,8 @@ namespace POCM
                                 {
                                     rsa.ImportRSAPrivateKey(privateKeyBytes, out _);
                                     string address = Convert.ToBase64String(rsa.ExportRSAPublicKey());
-                                    balanceLabel.Text = $"Balance: {blockchain.GetBalance(address)} MATE";
+                                    balanceLabel.Text = $"Balance: {blockchain.GetBalance(address)} CHECK";
+                                    balanceLabel.Position = new TGUI.Vector2f(0, 40);
                                 }
                                 index++;
                             }
