@@ -126,21 +126,32 @@ namespace POCM
         }
 
         // get public key balance
-        public int GetBalance(string address)
+        public ulong GetBalance(string address)
         {
-            int balance = 0;
+            ulong balance = 0;
             foreach (var block in Chain)
             {
                 foreach (var tx in block.Transactions)
                 {
                     if (tx.To == address)
                     {
-                        balance += (int)tx.Amount;
+                        balance += (ulong)tx.Amount;
                     }
                     if (tx.From == address)
                     {
-                        balance -= (int)tx.Amount;
+                        balance -= (ulong)tx.Amount;
                     }
+                }
+            }
+            foreach (var tx in Mempool)
+            {
+                if (tx.To == address)
+                {
+                    balance += (ulong)tx.Amount;
+                }
+                if (tx.From == address)
+                {
+                    balance -= (ulong)tx.Amount;
                 }
             }
             return balance;
