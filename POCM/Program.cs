@@ -137,7 +137,7 @@ namespace POCM
             }
         }
 
-        static void RPCServer(Blockchain blockchain, string listenAddress = "localhost:19423")
+        static void RPCServer(Blockchain blockchain, string listenAddress = "localhost:18423")
         {
             HttpListener listener = new HttpListener();
             listener.Prefixes.Add("http://" + listenAddress + "/");
@@ -191,7 +191,7 @@ namespace POCM
                     else if (rpcRequest.method == "getbalance")
                     {
                         string address = rpcRequest.@params[0];
-                        int balance = blockchain.GetBalance(address);
+                        ulong balance = blockchain.GetBalance(address);
                         var response = new
                         {
                             result = balance
@@ -206,7 +206,7 @@ namespace POCM
                     {
                         string fromPrivateKey = rpcRequest.@params[0];
                         string toAddress = rpcRequest.@params[1];
-                        int amount = rpcRequest.@params[2];
+                        ulong amount = rpcRequest.@params[2];
                         try
                         {
                             byte[] privateKeyBytes = Convert.FromBase64String(fromPrivateKey);
@@ -644,7 +644,7 @@ namespace POCM
                         {
                             string fromPrivateKey = wallet[0];
                             string toAddress = sendEditBox.Text;
-                            int amount = int.Parse(amountEditBox.Text);
+                            ulong amount = ulong.Parse(amountEditBox.Text);
                             try
                             {
                                 byte[] privateKeyBytes = Convert.FromBase64String(fromPrivateKey);
